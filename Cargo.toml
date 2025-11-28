@@ -1,0 +1,32 @@
+[package]
+name = "znodes"
+version = "0.1.0"
+edition = "2021"
+description = "Zcash network crawler and monitor"
+repository = "https://github.com/Social-Mask-Labs/znodes"
+license = "MIT"
+
+[[bin]]
+name = "znodes"
+path = "main.rs"
+
+[dependencies]
+async-trait = "0.1"
+clap = { version = "4", features = ["derive"] }
+dns-lookup = "2"
+futures-util = "0.3"
+jsonrpsee = { version = "0.16", features = ["server"] }
+parking_lot = "0.12"
+pea2pea = "0.47"
+rand = "0.8"
+regex = "1"
+serde = { version = "1", features = ["derive"] }
+spectre = "0.4"
+tokio = { version = "1", features = ["full"] }
+tokio-util = { version = "0.7", features = ["codec"] }
+tower = "0.4"
+tower-http = { version = "0.4", features = ["cors"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+ziggurat-core-crawler = { git = "https://github.com/runziggurat/ziggurat-core", branch = "main" }
+ziggurat-zcash = { git = "https://github.com/runziggurat/zcash", branch = "main" }

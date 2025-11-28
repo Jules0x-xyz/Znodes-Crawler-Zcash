@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZNodes - Zcash Network Monitor</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-0: #0a0a0b;
+            --bg-1: #111113;
+            --bg-2: #18181b;
+            --bg-3: #27272a;
+            --border: #27272a;
+            --text-0: #fafafa;
+            --text-1: #a1a1aa;
+            --text-2: #71717a;
+            --accent: #f4b728;
+            --green: #22c55e;
+            --blue: #3b82f6;
+            --red: #ef4444;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: var(--bg-0);
+            color: var(--text-0);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+        .container { max-width: 1280px; margin: 0 auto; padding: 0 20px; }
+
+        /* Navigation */
+        nav {
+            background: var(--bg-1);
+            border-bottom: 1px solid var(--border);
+            padding: 16px 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .nav-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 700;
+            font-size: 1.25rem;
+        }
+        .logo-mark {
+            width: 32px;
+            height: 32px;
+            background: var(--accent);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--bg-0);
+            font-weight: 700;
+        }
+        .nav-status {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            font-size: 0.875rem;
+            color: var(--text-1);
+        }
+        .status-live {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--green);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        /* Stats Section */
+        .stats-section { padding: 40px 0; }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 1px;
+            background: var(--border);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        .stat-item {
+            background: var(--bg-1);
+            padding: 24px;
+            text-align: center;
+        }
+        .stat-item.primary { background: var(--bg-2); }
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--text-0);
+            line-height: 1.2;
+        }
+        .stat-item.primary .stat-value { color: var(--accent); }
+        .stat-item.zcashd .stat-value { color: var(--accent); }
+        .stat-item.zebra .stat-value { color: var(--blue); }
+        .stat-label {
+            font-size: 0.75rem;
+            color: var(--text-2);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 8px;
+        }
+
+        /* Distribution */
+        .distribution-section { padding-bottom: 40px; }
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        .section-title {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--text-1);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .distribution-bar {
+            height: 8px;
+            background: var(--bg-2);
+            border-radius: 4px;
+            overflow: hidden;
+            display: flex;
+        }
+        .dist-segment {
+            height: 100%;
+            transition: width 0.3s ease;
+        }
+        .dist-segment.zcashd { background: var(--accent); }
+        .dist-segment.zebra { background: var(--blue); }
+        .dist-legend {
+            display: flex;
+            gap: 24px;
+            margin-top: 12px;
+            font-size: 0.875rem;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-1);
+        }
+        .legend-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 2px;
+        }
+        .legend-dot.zcashd { background: var(--accent); }
+        .legend-dot.zebra { background: var(--blue); }
+
+        /* Nodes Table */
+        .nodes-section {
+            background: var(--bg-1);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 40px;
+        }
+        .nodes-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .nodes-title {
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+        .nodes-controls {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+        .search-input {
+            background: var(--bg-2);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 8px 12px;
+            color: var(--text-0);
+            font-size: 0.875rem;
+            width: 200px;
+        }
+        .search-input::placeholder { color: var(--text-2); }
+        .search-input:focus { outline: none; border-color: var(--accent); }
+        .filter-select {
+            background: var(--bg-2);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 8px 12px;
+            color: var(--text-0);
+            font-size: 0.875rem;
+        }
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.875rem;
+            color: var(--text-1);
+            cursor: pointer;
+        }
+        .table-wrap { overflow-x: auto; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th {
+            text-align: left;
+            padding: 12px 16px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: var(--text-2);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            background: var(--bg-2);
+            border-bottom: 1px solid var(--border);
+        }
+        td {
+            padding: 12px 16px;
+            font-size: 0.875rem;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-1);
+        }
+        tr:hover td { background: var(--bg-2); }
+        .mono {
+            font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+            font-size: 0.8125rem;
+        }
+        .tag {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.6875rem;
+            font-weight: 500;
+            text-transform: uppercase;
+        }
+        .tag-zcashd { background: rgba(244, 183, 40, 0.15); color: var(--accent); }
+        .tag-zebra { background: rgba(59, 130, 246, 0.15); color: var(--blue); }
+        .tag-flux { background: rgba(239, 68, 68, 0.15); color: var(--red); }
+        .tag-other { background: var(--bg-3); color: var(--text-2); }
+
+        /* Footer */
+        footer {
+            border-top: 1px solid var(--border);
+            padding: 24px 0;
+            text-align: center;
+            color: var(--text-2);
+            font-size: 0.75rem;
+        }
+        footer a { color: var(--accent); text-decoration: none; }
+
+        /* Error State */
+        .error-banner {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid var(--red);
+            border-radius: 8px;
+            padding: 16px;
+            margin: 20px 0;
+            color: var(--red);
+            display: none;
+        }
+
+        @media (max-width: 900px) {
+            .stats-grid { grid-template-columns: repeat(3, 1fr); }
+        }
+        @media (max-width: 600px) {
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .stat-value { font-size: 1.75rem; }
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="container">
+            <div class="nav-content">
+                <div class="logo">
+                    <div class="logo-mark">Z</div>
+                    <span>ZNodes</span>
+                </div>
+                <div class="nav-status">
+                    <div class="status-live">
+                        <div class="status-dot"></div>
+                        <span>Live</span>
+                    </div>
+                    <span id="runtime">--</span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container">
+        <div id="error" class="error-banner">
+            Connection failed. Ensure crawler is running with: --rpc-addr 127.0.0.1:54321
+        </div>
+
+        <section class="stats-section">
+            <div class="stats-grid">
+                <div class="stat-item primary">
+                    <div class="stat-value" id="relevant">--</div>
+                    <div class="stat-label">Reachable Nodes</div>
+                </div>
+                <div class="stat-item zcashd">
+                    <div class="stat-value" id="zcashd">--</div>
+                    <div class="stat-label">Zcashd</div>
+                </div>
+                <div class="stat-item zebra">
+                    <div class="stat-value" id="zebra">--</div>
+                    <div class="stat-label">Zebra</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="height">--</div>
+                    <div class="stat-label">Block Height</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="contacted">--</div>
+                    <div class="stat-label">Contacted</div>
+                </div>
+            </div>
+        </section>
+
+        <section class="distribution-section">
+            <div class="section-header">
+                <span class="section-title">Client Distribution</span>
+            </div>
+            <div class="distribution-bar" id="distBar"></div>
+            <div class="dist-legend">
+                <div class="legend-item">
+                    <div class="legend-dot zcashd"></div>
+                    <span id="zcashdPct">--</span> Zcashd
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot zebra"></div>
+                    <span id="zebraPct">--</span> Zebra
+                </div>
+            </div>
+        </section>
+
+        <section class="nodes-section">
+            <div class="nodes-header">
+                <span class="nodes-title">Network Nodes (<span id="nodeCount">0</span>)</span>
+                <div class="nodes-controls">
+                    <input type="text" class="search-input" id="search" placeholder="Search IP or user agent">
+                    <select class="filter-select" id="typeFilter">
+                        <option value="all">All Types</option>
+                        <option value="zcashd">Zcashd</option>
+                        <option value="zebra">Zebra</option>
+                    </select>
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="showFlux">
+                        Show non-Zcash
+                    </label>
+                </div>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>IP Address</th>
+                            <th>Port</th>
+                            <th>Client</th>
+                            <th>Version</th>
+                            <th>Height</th>
+                            <th>Last Seen</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody"></tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>ZNodes monitors the Zcash peer-to-peer network. Only nodes running zcashd or Zebra on mainnet are shown by default.</p>
+            <p style="margin-top: 8px;">Data updates automatically every 10 seconds. <a href="https://z.cash" target="_blank">z.cash</a></p>
+        </div>
+    </footer>
+
+    <script>
+        const RPC = 'http://127.0.0.1:54321/';
+        let allNodes = [];
+        let stats = null;
+
+        async function rpc(method, params = []) {
+            const r = await fetch(RPC, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({jsonrpc: '2.0', id: 0, method, params})
+            });
+            const data = await r.json();
+            return data.result;
+        }
+
+        async function refresh() {
+            try {
+                const includeFlux = document.getElementById('showFlux').checked;
+                const result = await rpc('getnodes', [includeFlux]);
+                
+                stats = result.stats;
+                allNodes = result.nodes;
+                
+                updateStats();
+                filterAndRender();
+                
+                document.getElementById('error').style.display = 'none';
+            } catch (e) {
+                console.error(e);
+                document.getElementById('error').style.display = 'block';
+            }
+        }
+
+        function updateStats() {
+            if (!stats) return;
+            
+            // Solo contar nodos relevantes (no Flux)
+            const relevantZcashd = allNodes.filter(n => n.client_type === 'zcashd' && n.is_relevant).length;
+            const relevantZebra = allNodes.filter(n => n.client_type === 'zebra' && n.is_relevant).length;
+            const totalRelevant = relevantZcashd + relevantZebra;
+            
+            document.getElementById('relevant').textContent = totalRelevant;
+            document.getElementById('zcashd').textContent = relevantZcashd;
+            document.getElementById('zebra').textContent = relevantZebra;
+            document.getElementById('height').textContent = stats.tip_height_estimate.toLocaleString();
+            document.getElementById('contacted').textContent = stats.num_contacted_nodes;
+            
+            // Runtime
+            const secs = stats.crawler_runtime_secs || 0;
+            const h = Math.floor(secs / 3600);
+            const m = Math.floor((secs % 3600) / 60);
+            document.getElementById('runtime').textContent = `${h}h ${m}m`;
+            
+            // Distribution bar
+            if (totalRelevant > 0) {
+                const zcashdPct = (relevantZcashd / totalRelevant) * 100;
+                const zebraPct = (relevantZebra / totalRelevant) * 100;
+                
+                document.getElementById('distBar').innerHTML = `
+                    <div class="dist-segment zcashd" style="width:${zcashdPct}%"></div>
+                    <div class="dist-segment zebra" style="width:${zebraPct}%"></div>
+                `;
+                document.getElementById('zcashdPct').textContent = `${zcashdPct.toFixed(1)}%`;
+                document.getElementById('zebraPct').textContent = `${zebraPct.toFixed(1)}%`;
+            }
+        }
+
+        function filterAndRender() {
+            const search = document.getElementById('search').value.toLowerCase();
+            const type = document.getElementById('typeFilter').value;
+            const showFlux = document.getElementById('showFlux').checked;
+            
+            let filtered = allNodes.filter(n => {
+                // Por defecto, solo mostrar nodos relevantes
+                if (!showFlux && !n.is_relevant) return false;
+                if (!showFlux && n.is_flux) return false;
+                
+                if (type !== 'all' && n.client_type !== type) return false;
+                
+                const str = `${n.ip} ${n.user_agent || ''}`.toLowerCase();
+                return str.includes(search);
+            });
+            
+            document.getElementById('nodeCount').textContent = filtered.length;
+            renderTable(filtered);
+        }
+
+        function formatTime(secs) {
+            if (!secs || secs > 86400 * 365) return '--';
+            if
