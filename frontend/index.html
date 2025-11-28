@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ZNodes - Zcash Network Monitor</title>
+    <link rel="icon" type="image/png" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='45' fill='%23F4B728'/><text x='50' y='68' font-size='50' text-anchor='middle' fill='%23231F20' font-weight='bold'>Z</text></svg>">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -47,20 +48,14 @@
         .logo {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
             font-weight: 700;
             font-size: 1.25rem;
         }
-        .logo-mark {
-            width: 32px;
-            height: 32px;
-            background: var(--accent);
-            border-radius: 6px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--bg-0);
-            font-weight: 700;
+        .logo-img {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
         }
         .nav-status {
             display: flex;
@@ -296,7 +291,12 @@
         <div class="container">
             <div class="nav-content">
                 <div class="logo">
-                    <div class="logo-mark">Z</div>
+                    <svg class="logo-img" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="50" cy="50" r="48" fill="#231F20" stroke="#fff" stroke-width="2"/>
+                        <circle cx="50" cy="50" r="40" fill="#F4B728"/>
+                        <path d="M50 20 L50 30 M50 70 L50 80" stroke="#231F20" stroke-width="8" stroke-linecap="round"/>
+                        <path d="M35 35 L65 35 L35 65 L65 65" stroke="#231F20" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                    </svg>
                     <span>ZNodes</span>
                 </div>
                 <div class="nav-status">
@@ -434,7 +434,6 @@
         function updateStats() {
             if (!stats) return;
             
-            // Solo contar nodos relevantes (no Flux)
             const relevantZcashd = allNodes.filter(n => n.client_type === 'zcashd' && n.is_relevant).length;
             const relevantZebra = allNodes.filter(n => n.client_type === 'zebra' && n.is_relevant).length;
             const totalRelevant = relevantZcashd + relevantZebra;
@@ -445,13 +444,11 @@
             document.getElementById('height').textContent = stats.tip_height_estimate.toLocaleString();
             document.getElementById('contacted').textContent = stats.num_contacted_nodes;
             
-            // Runtime
             const secs = stats.crawler_runtime_secs || 0;
             const h = Math.floor(secs / 3600);
             const m = Math.floor((secs % 3600) / 60);
             document.getElementById('runtime').textContent = `${h}h ${m}m`;
             
-            // Distribution bar
             if (totalRelevant > 0) {
                 const zcashdPct = (relevantZcashd / totalRelevant) * 100;
                 const zebraPct = (relevantZebra / totalRelevant) * 100;
@@ -471,12 +468,9 @@
             const showFlux = document.getElementById('showFlux').checked;
             
             let filtered = allNodes.filter(n => {
-                // Por defecto, solo mostrar nodos relevantes
                 if (!showFlux && !n.is_relevant) return false;
                 if (!showFlux && n.is_flux) return false;
-                
                 if (type !== 'all' && n.client_type !== type) return false;
-                
                 const str = `${n.ip} ${n.user_agent || ''}`.toLowerCase();
                 return str.includes(search);
             });
@@ -487,4 +481,47 @@
 
         function formatTime(secs) {
             if (!secs || secs > 86400 * 365) return '--';
-            if
+            if (secs < 60) return secs + 's';
+            if (secs < 3600) return Math.floor(secs / 60) + 'm';
+            if (secs < 86400) return Math.floor(secs / 3600) + 'h';
+            return Math.floor(secs / 86400) + 'd';
+        }
+
+        function renderTable(nodes) {
+            const tbody = document.getElementById('tbody');
+            
+            if (nodes.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:40px;">No nodes found</td></tr>';
+                return;
+            }
+            
+            const html = nodes.slice(0, 200).map(n => {
+                const tagClass = {zcashd: 'tag-zcashd', zebra: 'tag-zebra', flux: 'tag-flux'}[n.client_type] || 'tag-other';
+                const version = n.user_agent ? n.user_agent.replace(/^\/|\/$/g, '') : '--';
+                
+                return `<tr>
+                    <td class="mono">${n.ip}</td>
+                    <td class="mono">${n.port}</td>
+                    <td><span class="tag ${tagClass}">${n.client_type}</span></td>
+                    <td>${version}</td>
+                    <td class="mono">${n.height?.toLocaleString() || '--'}</td>
+                    <td>${formatTime(n.last_seen_secs)}</td>
+                </tr>`;
+            }).join('');
+            
+            tbody.innerHTML = html;
+            
+            if (nodes.length > 200) {
+                tbody.innerHTML += `<tr><td colspan="6" style="text-align:center;color:var(--text-2)">+ ${nodes.length - 200} more nodes</td></tr>`;
+            }
+        }
+
+        document.getElementById('search').addEventListener('input', filterAndRender);
+        document.getElementById('typeFilter').addEventListener('change', filterAndRender);
+        document.getElementById('showFlux').addEventListener('change', refresh);
+
+        refresh();
+        setInterval(refresh, 10000);
+    </script>
+</body>
+</html>
