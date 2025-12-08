@@ -2221,31 +2221,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "zcash-crawler"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "clap",
- "dns-lookup",
- "futures-util",
- "jsonrpsee",
- "parking_lot",
- "pea2pea 0.47.0",
- "rand",
- "regex",
- "serde",
- "spectre 0.4.0",
- "tokio",
- "tokio-util",
- "tower",
- "tower-http",
- "tracing",
- "tracing-subscriber",
- "ziggurat-core-crawler 0.1.2 (git+https://github.com/runziggurat/ziggurat-core?branch=main)",
- "ziggurat-zcash",
-]
-
-[[package]]
 name = "zerocopy"
 version = "0.8.30"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2331,4 +2306,29 @@ dependencies = [
  "ziggurat-core-crawler 0.1.2 (git+https://github.com/runziggurat/ziggurat-core?rev=33ef131)",
  "ziggurat-core-metrics",
  "ziggurat-core-utils",
+]
+
+[[package]]
+name = "znodes"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "clap",
+ "dns-lookup",
+ "futures-util",
+ "jsonrpsee",
+ "parking_lot",
+ "pea2pea 0.47.0",
+ "rand",
+ "regex",
+ "serde",
+ "spectre 0.4.0",
+ "tokio",
+ "tokio-util",
+ "tower",
+ "tower-http",
+ "tracing",
+ "tracing-subscriber",
+ "ziggurat-core-crawler 0.1.2 (git+https://github.com/runziggurat/ziggurat-core?branch=main)",
+ "ziggurat-zcash",
 ]

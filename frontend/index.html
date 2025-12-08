@@ -3,372 +3,488 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ZNodes - Zcash Network Monitor</title>
-    <link rel="icon" type="image/png" href="zcash-logo.png">
+    
+    <!-- Primary SEO -->
+    <title>ZNodes - Zcash Network Node Monitor | Live Zcashd & Zebra Nodes</title>
+    <meta name="description" content="Real-time Zcash network monitor. Track live zcashd and Zebra nodes, view network statistics, block height, and node distribution. Monitor the Zcash P2P network.">
+    <meta name="keywords" content="Zcash, ZNodes, zcashd, Zebra, Zcash nodes, cryptocurrency nodes, Zcash network, blockchain nodes, Zcash monitor, ZEC nodes, Zcash P2P, network explorer, node tracker, Zcash mainnet">
+    <meta name="author" content="ZNodes">
+    <meta name="robots" content="index, follow, max-image-preview:large">
+    <link rel="canonical" href="https://znodes.live/">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://znodes.live/">
+    <meta property="og:title" content="ZNodes - Live Zcash Network Monitor">
+    <meta property="og:description" content="Real-time monitoring of Zcash network nodes. Track zcashd and Zebra nodes, network health, and blockchain statistics.">
+    <meta property="og:image" content="https://znodes.live/zcash-logo.png">
+    <meta property="og:site_name" content="ZNodes">
+    <meta property="og:locale" content="en_US">
+    
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="https://znodes.live/">
+    <meta name="twitter:title" content="ZNodes - Live Zcash Network Monitor">
+    <meta name="twitter:description" content="Real-time monitoring of Zcash network nodes. Track zcashd and Zebra nodes live.">
+    <meta name="twitter:image" content="https://znodes.live/zcash-logo.png">
+    
+    <!-- Additional SEO -->
+    <meta name="theme-color" content="#f4b728">
+    <meta name="application-name" content="ZNodes">
+    <meta name="apple-mobile-web-app-title" content="ZNodes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/zcash-logo.png">
+    <link rel="apple-touch-icon" href="/zcash-logo.png">
+    
+    <!-- Structured Data / JSON-LD -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "ZNodes",
+        "description": "Real-time Zcash network node monitor tracking zcashd and Zebra nodes",
+        "url": "https://znodes.live",
+        "applicationCategory": "Cryptocurrency",
+        "operatingSystem": "Web",
+        "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+        },
+        "creator": {
+            "@type": "Organization",
+            "name": "ZNodes"
+        },
+        "about": {
+            "@type": "Thing",
+            "name": "Zcash",
+            "description": "Zcash cryptocurrency network"
+        },
+        "keywords": "Zcash, zcashd, Zebra, cryptocurrency, blockchain, nodes, network monitor"
+    }
+    </script>
+    
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-0: #0a0a0b;
-            --bg-1: #111113;
-            --bg-2: #18181b;
-            --bg-3: #27272a;
-            --border: #27272a;
-            --text-0: #fafafa;
-            --text-1: #a1a1aa;
-            --text-2: #71717a;
+            --bg-primary: #09090b;
+            --bg-secondary: #0f0f11;
+            --bg-card: #141416;
+            --border: #1f1f23;
+            --text-primary: #fafafa;
+            --text-secondary: #a1a1aa;
+            --text-muted: #52525b;
             --accent: #f4b728;
+            --accent-dim: rgba(244, 183, 40, 0.1);
             --green: #22c55e;
             --blue: #3b82f6;
-            --red: #ef4444;
+            --blue-dim: rgba(59, 130, 246, 0.1);
         }
+        
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: 'Inter', system-ui, sans-serif;
-            background: var(--bg-0);
-            color: var(--text-0);
-            line-height: 1.6;
+        
+        body { 
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
             min-height: 100vh;
+            font-size: 14px;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
         }
-        .container { max-width: 1280px; margin: 0 auto; padding: 0 20px; }
-
+        
+        .container { 
+            max-width: 1280px; 
+            margin: 0 auto; 
+            padding: 0 24px; 
+        }
+        
         /* Navigation */
-        nav {
-            background: var(--bg-1);
+        nav { 
+            background: var(--bg-secondary);
             border-bottom: 1px solid var(--border);
             padding: 16px 0;
             position: sticky;
             top: 0;
             z-index: 100;
+            backdrop-filter: blur(8px);
         }
-        .nav-content {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+        
+        .nav-content { 
+            display: flex; 
+            align-items: center; 
+            gap: 12px; 
         }
-        .logo {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            font-weight: 700;
-            font-size: 1.25rem;
+        
+        .logo { 
+            width: 28px; 
+            height: 28px; 
         }
-        .logo-img {
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
+        
+        .brand, h1.brand { 
+            font-size: 18px; 
+            font-weight: 700; 
+            color: var(--text-primary);
+            letter-spacing: -0.5px;
         }
-        .nav-status {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-            font-size: 0.875rem;
-            color: var(--text-1);
+        
+        .brand span {
+            color: var(--accent);
         }
-        .status-live {
+        
+        .live-badge { 
+            background: var(--green);
+            color: #fff; 
+            padding: 3px 10px; 
+            border-radius: 100px; 
+            font-size: 11px; 
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-left: auto;
+        }
+        
+        .uptime-chip {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            padding: 4px 12px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 500;
             display: flex;
             align-items: center;
             gap: 6px;
         }
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            background: var(--green);
-            border-radius: 50%;
-            animation: pulse 2s infinite;
+        
+        .uptime-chip span {
+            color: var(--text-primary);
+            font-weight: 600;
+            letter-spacing: 0.3px;
         }
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.4; }
+        
+        /* Main Content */
+        main {
+            padding: 32px 0;
         }
-
-        /* Stats Section */
-        .stats-section { padding: 40px 0; }
-        .stats-grid {
-            display: grid;
+        
+        /* Stats Grid */
+        .stats-grid { 
+            display: grid; 
             grid-template-columns: repeat(5, 1fr);
-            gap: 1px;
-            background: var(--border);
+            gap: 16px; 
+            margin-bottom: 24px;
+        }
+        
+        @media (max-width: 900px) {
+            .stats-grid { grid-template-columns: repeat(3, 1fr); }
+        }
+        
+        @media (max-width: 600px) {
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+        
+        .stat-card { 
+            background: var(--bg-card);
             border: 1px solid var(--border);
-            border-radius: 12px;
-            overflow: hidden;
+            border-radius: 12px; 
+            padding: 20px;
         }
-        .stat-item {
-            background: var(--bg-1);
-            padding: 24px;
-            text-align: center;
-        }
-        .stat-item.primary { background: var(--bg-2); }
-        .stat-value {
-            font-size: 2.5rem;
-            font-weight: 700;
-            color: var(--text-0);
-            line-height: 1.2;
-        }
-        .stat-item.primary .stat-value { color: var(--accent); }
-        .stat-item.zcashd .stat-value { color: var(--accent); }
-        .stat-item.zebra .stat-value { color: var(--blue); }
-        .stat-label {
-            font-size: 0.75rem;
-            color: var(--text-2);
+        
+        .stat-label { 
+            color: var(--text-muted);
+            font-size: 12px;
+            font-weight: 500;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            margin-top: 8px;
+            margin-bottom: 8px;
         }
-
-        /* Distribution */
-        .distribution-section { padding-bottom: 40px; }
-        .section-header {
+        
+        .stat-value { 
+            font-size: 28px; 
+            font-weight: 700;
+            color: var(--text-primary);
+            letter-spacing: -1px;
+        }
+        
+        .stat-value.accent {
+            color: var(--accent);
+        }
+        
+        .stat-value.blue {
+            color: var(--blue);
+        }
+        
+        /* Distribution Section */
+        .dist-section { 
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px; 
+            padding: 20px;
+            margin-bottom: 24px;
+        }
+        
+        .dist-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 16px;
         }
-        .section-title {
-            font-size: 0.875rem;
+        
+        .dist-title { 
             font-weight: 600;
-            color: var(--text-1);
+            font-size: 13px;
+            color: var(--text-secondary);
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
-        .distribution-bar {
-            height: 8px;
-            background: var(--bg-2);
-            border-radius: 4px;
-            overflow: hidden;
-            display: flex;
+        
+        .dist-bar { 
+            display: flex; 
+            height: 8px; 
+            border-radius: 100px; 
+            overflow: hidden; 
+            background: var(--border);
         }
-        .dist-segment {
-            height: 100%;
-            transition: width 0.3s ease;
+        
+        .dist-zcashd { background: var(--accent); }
+        .dist-zebra { background: var(--blue); }
+        
+        .dist-legend { 
+            display: flex; 
+            gap: 24px; 
+            margin-top: 16px;
         }
-        .dist-segment.zcashd { background: var(--accent); }
-        .dist-segment.zebra { background: var(--blue); }
-        .dist-legend {
-            display: flex;
-            gap: 24px;
-            margin-top: 12px;
-            font-size: 0.875rem;
-        }
-        .legend-item {
-            display: flex;
-            align-items: center;
+        
+        .legend-item { 
+            display: flex; 
+            align-items: center; 
             gap: 8px;
-            color: var(--text-1);
+            font-size: 13px;
+            color: var(--text-secondary);
         }
-        .legend-dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 2px;
+        
+        .legend-dot { 
+            width: 10px; 
+            height: 10px; 
+            border-radius: 3px;
         }
-        .legend-dot.zcashd { background: var(--accent); }
-        .legend-dot.zebra { background: var(--blue); }
-
-        /* Nodes Table */
-        .nodes-section {
-            background: var(--bg-1);
+        
+        .legend-value {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        /* Nodes Section */
+        .nodes-section { 
+            background: var(--bg-card);
             border: 1px solid var(--border);
-            border-radius: 12px;
+            border-radius: 12px; 
             overflow: hidden;
-            margin-bottom: 40px;
         }
-        .nodes-header {
+        
+        .nodes-header { 
             padding: 16px 20px;
             border-bottom: 1px solid var(--border);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            display: flex; 
+            align-items: center; 
+            gap: 16px;
             flex-wrap: wrap;
-            gap: 12px;
         }
-        .nodes-title {
-            font-size: 0.875rem;
+        
+        .nodes-title { 
             font-weight: 600;
+            font-size: 15px;
         }
-        .nodes-controls {
-            display: flex;
-            gap: 12px;
-            align-items: center;
+        
+        .nodes-count {
+            color: var(--text-muted);
+            font-weight: 400;
         }
-        .search-input {
-            background: var(--bg-2);
+        
+        .search { 
+            background: var(--bg-primary);
             border: 1px solid var(--border);
-            border-radius: 6px;
-            padding: 8px 12px;
-            color: var(--text-0);
-            font-size: 0.875rem;
-            width: 200px;
+            border-radius: 8px; 
+            padding: 10px 14px;
+            color: var(--text-primary);
+            font-size: 13px;
+            width: 240px;
+            margin-left: auto;
+            transition: border-color 0.2s;
         }
-        .search-input::placeholder { color: var(--text-2); }
-        .search-input:focus { outline: none; border-color: var(--accent); }
-        .filter-select {
-            background: var(--bg-2);
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            padding: 8px 12px;
-            color: var(--text-0);
-            font-size: 0.875rem;
+        
+        .search:focus {
+            outline: none;
+            border-color: var(--accent);
         }
-        .checkbox-label {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 0.875rem;
-            color: var(--text-1);
-            cursor: pointer;
+        
+        .search::placeholder {
+            color: var(--text-muted);
         }
-        .table-wrap { overflow-x: auto; }
-        table {
-            width: 100%;
+        
+        /* Table */
+        table { 
+            width: 100%; 
             border-collapse: collapse;
         }
-        th {
+        
+        th { 
+            padding: 12px 20px;
             text-align: left;
-            padding: 12px 16px;
-            font-size: 0.75rem;
+            background: var(--bg-secondary);
+            color: var(--text-muted);
             font-weight: 500;
-            color: var(--text-2);
+            font-size: 11px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            background: var(--bg-2);
+        }
+        
+        td { 
+            padding: 14px 20px;
             border-bottom: 1px solid var(--border);
+            font-size: 13px;
         }
-        td {
-            padding: 12px 16px;
-            font-size: 0.875rem;
-            border-bottom: 1px solid var(--border);
-            color: var(--text-1);
+        
+        tr:last-child td {
+            border-bottom: none;
         }
-        tr:hover td { background: var(--bg-2); }
-        .mono {
-            font-family: 'SF Mono', Monaco, 'Courier New', monospace;
-            font-size: 0.8125rem;
+        
+        tr:hover td { 
+            background: var(--bg-secondary);
         }
-        .tag {
-            display: inline-block;
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-size: 0.6875rem;
-            font-weight: 500;
+        
+        .ip-cell {
+            font-family: 'SF Mono', 'Monaco', 'Inconsolata', monospace;
+            font-size: 12px;
+        }
+        
+        .client-badge { 
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
             text-transform: uppercase;
+            letter-spacing: 0.3px;
         }
-        .tag-zcashd { background: rgba(244, 183, 40, 0.15); color: var(--accent); }
-        .tag-zebra { background: rgba(59, 130, 246, 0.15); color: var(--blue); }
-        .tag-flux { background: rgba(239, 68, 68, 0.15); color: var(--red); }
-        .tag-other { background: var(--bg-3); color: var(--text-2); }
-
-        /* Footer */
-        footer {
-            border-top: 1px solid var(--border);
-            padding: 24px 0;
-            text-align: center;
-            color: var(--text-2);
-            font-size: 0.75rem;
+        
+        .badge-zcashd { 
+            background: var(--accent-dim);
+            color: var(--accent);
         }
-        footer a { color: var(--accent); text-decoration: none; }
-
-        /* Error State */
-        .error-banner {
+        
+        .badge-zebra { 
+            background: var(--blue-dim);
+            color: var(--blue);
+        }
+        
+        .version-cell {
+            color: var(--text-secondary);
+        }
+        
+        .height-cell {
+            font-family: 'SF Mono', 'Monaco', 'Inconsolata', monospace;
+            font-size: 12px;
+        }
+        
+        .time-cell {
+            color: var(--text-muted);
+        }
+        
+        /* Error Banner */
+        .error { 
             background: rgba(239, 68, 68, 0.1);
-            border: 1px solid var(--red);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #fca5a5;
+            padding: 12px 20px;
             border-radius: 8px;
-            padding: 16px;
-            margin: 20px 0;
-            color: var(--red);
+            margin-bottom: 24px;
             display: none;
+            font-size: 13px;
         }
-
-        @media (max-width: 900px) {
-            .stats-grid { grid-template-columns: repeat(3, 1fr); }
+        
+        /* Footer */
+        footer { 
+            text-align: center; 
+            padding: 40px 24px;
+            color: var(--text-muted);
+            font-size: 13px;
         }
-        @media (max-width: 600px) {
-            .stats-grid { grid-template-columns: repeat(2, 1fr); }
-            .stat-value { font-size: 1.75rem; }
+        
+        footer a { 
+            color: var(--accent);
+            text-decoration: none;
+        }
+        
+        footer a:hover {
+            text-decoration: underline;
         }
     </style>
 </head>
 <body>
     <nav>
-        <div class="container">
-            <div class="nav-content">
-                <div class="logo">
-                    <img src="zcash-logo.png" alt="Zcash" class="logo-img">
-                    <span>ZNodes</span>
-                </div>
-                <div class="nav-status">
-                    <div class="status-live">
-                        <div class="status-dot"></div>
-                        <span>Live</span>
-                    </div>
-                    <span id="runtime">--</span>
-                </div>
-            </div>
+        <div class="container nav-content">
+            <img src="/zcash-logo.png" alt="Zcash" class="logo">
+            <h1 class="brand">Z<span>Nodes</span></h1>
+            <span class="live-badge">Live</span>
+            <span class="uptime-chip">Uptime <span id="uptime">--</span></span>
         </div>
     </nav>
-
-    <main class="container">
-        <div id="error" class="error-banner">
-            Connection failed. Ensure crawler is running with: --rpc-addr 127.0.0.1:54321
-        </div>
-
-        <section class="stats-section">
+    
+    <main>
+        <div class="container">
+            <div id="error" class="error">Connection failed. Retrying...</div>
+            
             <div class="stats-grid">
-                <div class="stat-item primary">
-                    <div class="stat-value" id="relevant">--</div>
+                <div class="stat-card">
                     <div class="stat-label">Reachable Nodes</div>
+                    <div class="stat-value" id="total">--</div>
                 </div>
-                <div class="stat-item zcashd">
-                    <div class="stat-value" id="zcashd">--</div>
+                <div class="stat-card">
                     <div class="stat-label">Zcashd</div>
+                    <div class="stat-value accent" id="zcashd">--</div>
                 </div>
-                <div class="stat-item zebra">
-                    <div class="stat-value" id="zebra">--</div>
+                <div class="stat-card">
                     <div class="stat-label">Zebra</div>
+                    <div class="stat-value blue" id="zebra">--</div>
                 </div>
-                <div class="stat-item">
-                    <div class="stat-value" id="height">--</div>
+                <div class="stat-card">
                     <div class="stat-label">Block Height</div>
+                    <div class="stat-value" id="height">--</div>
                 </div>
-                <div class="stat-item">
-                    <div class="stat-value" id="contacted">--</div>
+                <div class="stat-card">
                     <div class="stat-label">Contacted</div>
+                    <div class="stat-value" id="contacted">--</div>
                 </div>
             </div>
-        </section>
-
-        <section class="distribution-section">
-            <div class="section-header">
-                <span class="section-title">Client Distribution</span>
-            </div>
-            <div class="distribution-bar" id="distBar"></div>
-            <div class="dist-legend">
-                <div class="legend-item">
-                    <div class="legend-dot zcashd"></div>
-                    <span id="zcashdPct">--</span> Zcashd
+            
+            <div class="dist-section">
+                <div class="dist-header">
+                    <span class="dist-title">Client Distribution</span>
                 </div>
-                <div class="legend-item">
-                    <div class="legend-dot zebra"></div>
-                    <span id="zebraPct">--</span> Zebra
-                </div>
-            </div>
-        </section>
-
-        <section class="nodes-section">
-            <div class="nodes-header">
-                <span class="nodes-title">Network Nodes (<span id="nodeCount">0</span>)</span>
-                <div class="nodes-controls">
-                    <input type="text" class="search-input" id="search" placeholder="Search IP or user agent">
-                    <select class="filter-select" id="typeFilter">
-                        <option value="all">All Types</option>
-                        <option value="zcashd">Zcashd</option>
-                        <option value="zebra">Zebra</option>
-                    </select>
-                    <label class="checkbox-label">
-                        <input type="checkbox" id="showFlux">
-                        Show non-Zcash
-                    </label>
+                <div class="dist-bar" id="distBar"></div>
+                <div class="dist-legend">
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background:var(--accent)"></div>
+                        <span class="legend-value" id="zcashdPct">--%</span>
+                        <span>Zcashd</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background:var(--blue)"></div>
+                        <span class="legend-value" id="zebraPct">--%</span>
+                        <span>Zebra</span>
+                    </div>
                 </div>
             </div>
-            <div class="table-wrap">
+            
+            <div class="nodes-section">
+                <div class="nodes-header">
+                    <span class="nodes-title">Network Nodes <span class="nodes-count">(<span id="nodeCount">0</span>)</span></span>
+                    <input type="text" class="search" id="search" placeholder="Search IP or user agent..." oninput="renderNodes()">
+                </div>
                 <table>
                     <thead>
                         <tr>
@@ -383,140 +499,129 @@
                     <tbody id="tbody"></tbody>
                 </table>
             </div>
-        </section>
+        </div>
     </main>
-
+    
     <footer>
         <div class="container">
-            <p>ZNodes monitors the Zcash peer-to-peer network. Only nodes running zcashd or Zebra on mainnet are shown by default.</p>
-            <p style="margin-top: 8px;">Data updates automatically every 10 seconds. <a href="https://z.cash" target="_blank">z.cash</a></p>
+            <h2 style="font-size:16px;margin-bottom:12px;color:var(--text-secondary)">About ZNodes</h2>
+            <p>ZNodes is a real-time Zcash network monitor that tracks all active zcashd and Zebra nodes on mainnet. Monitor network health, view node distribution, and explore the Zcash peer-to-peer network.</p>
+            <p style="margin-top:12px">
+                <a href="https://z.cash" target="_blank">Zcash Official</a> · 
+                <a href="https://electriccoin.co" target="_blank">Electric Coin Co</a> · 
+                <a href="https://zfnd.org" target="_blank">Zcash Foundation</a>
+            </p>
+            <p style="margin-top:16px;font-size:12px;color:var(--text-muted)">© 2025 ZNodes. Zcash node tracker and network explorer.</p>
         </div>
     </footer>
 
     <script>
-        const RPC = 'http://127.0.0.1:54321/';
-        let allNodes = [];
-        let stats = null;
+        let nodes = [];
+        let stats = {};
 
-        async function rpc(method, params = []) {
-            const r = await fetch(RPC, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({jsonrpc: '2.0', id: 0, method, params})
-            });
-            const data = await r.json();
-            return data.result;
-        }
-
-        async function refresh() {
+        async function fetchData() {
             try {
-                const includeFlux = document.getElementById('showFlux').checked;
-                const result = await rpc('getnodes', [includeFlux]);
+                const res = await fetch('/rpc', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({jsonrpc: '2.0', id: 0, method: 'getnodes', params: [false]})
+                });
+                const data = await res.json();
                 
-                stats = result.stats;
-                allNodes = result.nodes;
-                
-                updateStats();
-                filterAndRender();
-                
-                document.getElementById('error').style.display = 'none';
+                if (data.result) {
+                    nodes = data.result.nodes || [];
+                    stats = data.result.stats || {};
+                    updateUI();
+                    document.getElementById('error').style.display = 'none';
+                }
             } catch (e) {
                 console.error(e);
                 document.getElementById('error').style.display = 'block';
             }
         }
 
-        function updateStats() {
-            if (!stats) return;
-            
-            const relevantZcashd = allNodes.filter(n => n.client_type === 'zcashd' && n.is_relevant).length;
-            const relevantZebra = allNodes.filter(n => n.client_type === 'zebra' && n.is_relevant).length;
-            const totalRelevant = relevantZcashd + relevantZebra;
-            
-            document.getElementById('relevant').textContent = totalRelevant;
-            document.getElementById('zcashd').textContent = relevantZcashd;
-            document.getElementById('zebra').textContent = relevantZebra;
-            document.getElementById('height').textContent = stats.tip_height_estimate.toLocaleString();
-            document.getElementById('contacted').textContent = stats.num_contacted_nodes;
-            
-            const secs = stats.crawler_runtime_secs || 0;
-            const h = Math.floor(secs / 3600);
-            const m = Math.floor((secs % 3600) / 60);
-            document.getElementById('runtime').textContent = `${h}h ${m}m`;
-            
-            if (totalRelevant > 0) {
-                const zcashdPct = (relevantZcashd / totalRelevant) * 100;
-                const zebraPct = (relevantZebra / totalRelevant) * 100;
-                
-                document.getElementById('distBar').innerHTML = `
-                    <div class="dist-segment zcashd" style="width:${zcashdPct}%"></div>
-                    <div class="dist-segment zebra" style="width:${zebraPct}%"></div>
-                `;
-                document.getElementById('zcashdPct').textContent = `${zcashdPct.toFixed(1)}%`;
-                document.getElementById('zebraPct').textContent = `${zebraPct.toFixed(1)}%`;
+        function formatRuntime(seconds) {
+            const secs = Math.max(0, seconds || 0);
+            if (secs === 0) return 'Starting';
+            const days = Math.floor(secs / 86400);
+            const hours = Math.floor((secs % 86400) / 3600);
+            const minutes = Math.floor((secs % 3600) / 60);
+            const remSecs = secs % 60;
+            if (days > 0) {
+                return `${days}d ${hours}h`;
             }
+            if (hours > 0) {
+                return `${hours}h ${minutes}m`;
+            }
+            if (minutes > 0) {
+                return `${minutes}m ${remSecs}s`;
+            }
+            return `${remSecs}s`;
         }
 
-        function filterAndRender() {
-            const search = document.getElementById('search').value.toLowerCase();
-            const type = document.getElementById('typeFilter').value;
-            const showFlux = document.getElementById('showFlux').checked;
+        function updateUI() {
+            const zcashdNodes = nodes.filter(n => n.client_type === 'zcashd');
+            const zebraNodes = nodes.filter(n => n.client_type === 'zebra');
             
-            let filtered = allNodes.filter(n => {
-                if (!showFlux && !n.is_relevant) return false;
-                if (!showFlux && n.is_flux) return false;
-                if (type !== 'all' && n.client_type !== type) return false;
-                const str = `${n.ip} ${n.user_agent || ''}`.toLowerCase();
+            document.getElementById('total').textContent = nodes.length;
+            document.getElementById('zcashd').textContent = zcashdNodes.length;
+            document.getElementById('zebra').textContent = zebraNodes.length;
+            document.getElementById('height').textContent = (stats.tip_height_estimate || 0).toLocaleString();
+            document.getElementById('contacted').textContent = (stats.num_contacted_nodes || 0).toLocaleString();
+            const uptimeEl = document.getElementById('uptime');
+            if (uptimeEl) {
+                uptimeEl.textContent = formatRuntime(stats.crawler_runtime_secs || 0);
+            }
+            
+            
+            // Distribution
+            const total = nodes.length;
+            if (total > 0) {
+                const zPct = (zcashdNodes.length / total * 100).toFixed(1);
+                const bPct = (zebraNodes.length / total * 100).toFixed(1);
+                document.getElementById('distBar').innerHTML = `
+                    <div class="dist-zcashd" style="width:${zPct}%"></div>
+                    <div class="dist-zebra" style="width:${bPct}%"></div>
+                `;
+                document.getElementById('zcashdPct').textContent = zPct + '%';
+                document.getElementById('zebraPct').textContent = bPct + '%';
+            }
+            
+            renderNodes();
+        }
+
+        function renderNodes() {
+            const search = document.getElementById('search').value.toLowerCase();
+            const filtered = nodes.filter(n => {
+                const str = (n.ip + ' ' + (n.user_agent || '')).toLowerCase();
                 return str.includes(search);
             });
             
             document.getElementById('nodeCount').textContent = filtered.length;
-            renderTable(filtered);
-        }
-
-        function formatTime(secs) {
-            if (!secs || secs > 86400 * 365) return '--';
-            if (secs < 60) return secs + 's';
-            if (secs < 3600) return Math.floor(secs / 60) + 'm';
-            if (secs < 86400) return Math.floor(secs / 3600) + 'h';
-            return Math.floor(secs / 86400) + 'd';
-        }
-
-        function renderTable(nodes) {
-            const tbody = document.getElementById('tbody');
             
-            if (nodes.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:40px;">No nodes found</td></tr>';
-                return;
-            }
-            
-            const html = nodes.slice(0, 200).map(n => {
-                const tagClass = {zcashd: 'tag-zcashd', zebra: 'tag-zebra', flux: 'tag-flux'}[n.client_type] || 'tag-other';
-                const version = n.user_agent ? n.user_agent.replace(/^\/|\/$/g, '') : '--';
-                
+            const html = filtered.map(n => {
+                const badge = n.client_type === 'zcashd' ? 'badge-zcashd' : 'badge-zebra';
+                const version = (n.user_agent || '').replace(/\//g, '').replace('MagicBean:', '').replace('Zebra:', '');
+                const lastSeen = n.last_seen_secs < 60 ? 'Just now' : 
+                                n.last_seen_secs < 3600 ? Math.floor(n.last_seen_secs/60) + 'm ago' :
+                                n.last_seen_secs < 86400 ? Math.floor(n.last_seen_secs/3600) + 'h ago' :
+                                Math.floor(n.last_seen_secs/86400) + 'd ago';
                 return `<tr>
-                    <td class="mono">${n.ip}</td>
-                    <td class="mono">${n.port}</td>
-                    <td><span class="tag ${tagClass}">${n.client_type}</span></td>
-                    <td>${version}</td>
-                    <td class="mono">${n.height?.toLocaleString() || '--'}</td>
-                    <td>${formatTime(n.last_seen_secs)}</td>
+                    <td class="ip-cell">${n.ip}</td>
+                    <td>${n.port}</td>
+                    <td><span class="client-badge ${badge}">${n.client_type}</span></td>
+                    <td class="version-cell">${version}</td>
+                    <td class="height-cell">${(n.height || 0).toLocaleString()}</td>
+                    <td class="time-cell">${lastSeen}</td>
                 </tr>`;
             }).join('');
             
-            tbody.innerHTML = html;
-            
-            if (nodes.length > 200) {
-                tbody.innerHTML += `<tr><td colspan="6" style="text-align:center;color:var(--text-2)">+ ${nodes.length - 200} more nodes</td></tr>`;
-            }
+            document.getElementById('tbody').innerHTML = html || '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:40px">No nodes found</td></tr>';
         }
 
-        document.getElementById('search').addEventListener('input', filterAndRender);
-        document.getElementById('typeFilter').addEventListener('change', filterAndRender);
-        document.getElementById('showFlux').addEventListener('change', refresh);
-
-        refresh();
-        setInterval(refresh, 10000);
+        // Initial load and refresh every 10 seconds
+        fetchData();
+        setInterval(fetchData, 10000);
     </script>
 </body>
 </html>

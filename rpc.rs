@@ -1,58 +1,35 @@
-use std::{collections::HashMap, net::SocketAddr, sync::Arc};
+// rpc server - json-rpc api for getting node info
 
+use std::{collections::HashMap, net::SocketAddr, sync::Arc};
 use jsonrpsee::server::{RpcModule, ServerBuilder, ServerHandle};
 use parking_lot::Mutex;
 use serde::Serialize;
 use tower_http::cors::{Any, CorsLayer};
 use tracing::debug;
 use ziggurat_core_crawler::summary::NetworkSummary;
-
 use crate::network::KnownNode;
 
-// Tolerancia de altura respecto al tip (configurable)
-const MAX_HEIGHT_DELTA: i32 = 10000;
-
-// Altura mínima para mainnet (bloque actual ~2.7M)
-const MIN_MAINNET_HEIGHT: i32 = 2_500_000;
-
-// Puertos estándar de Zcash
-const ZCASH_MAINNET_PORT: u16 = 8233;
-const ZCASH_TESTNET_PORT: u16 = 18233;
-
+const HEIGHT_TOLERANCE: i32 = 10000;
+const MIN_HEIGHT: i32 = 2_500_000;
 pub const MAX_RESPONSE_SIZE: u32 = 200_000_000;
 
 #[derive(Clone, Serialize)]
 pub struct NodeInfo {
-    pub ip: String,
-    pub port: u16,
-    pub protocol_version: Option<u32>,
-    pub user_agent: Option<String>,
-    pub height: Option<i32>,
-    pub services: Option<u64>,
-    pub last_seen_secs: u64,
-    pub is_relevant: bool,
-    pub is_flux: bool,
-    pub client_type: String,
+    pub ip: String, pub port: u16,
+    pub protocol_version: Option<u32>, pub user_agent: Option<String>,
+    pub height: Option<i32>, pub services: Option<u64>,
+    pub last_seen_secs: u64, pub is_relevant: bool, pub is_flux: bool, pub client_type: String,
 }
 
 #[derive(Clone, Serialize)]
-pub struct NetworkStats {
-    pub num_known_nodes: usize,
-    pub num_contacted_nodes: usize,
-    pub num_relevant_zcash_nodes: usize,
-    pub num_zcashd_nodes: usize,
-    pub num_zebra_nodes: usize,
-    pub num_flux_nodes: usize,
-    pub num_other_nodes: usize,
-    pub tip_height_estimate: i32,
-    pub crawler_runtime_secs: u64,
+pub struct Stats {
+    pub num_known_nodes: usize, pub num_contacted_nodes: usize, pub num_relevant_zcash_nodes: usize,
+    pub num_zcashd_nodes: usize, pub num_zebra_nodes: usize, pub num_flux_nodes: usize, pub num_other_nodes: usize,
+    pub tip_height_estimate: i32, pub crawler_runtime_secs: u64,
 }
 
 #[derive(Clone, Serialize)]
-pub struct NodesResponse {
-    pub stats: NetworkStats,
-    pub nodes: Vec<NodeInfo>,
-}
+pub struct NodesResponse { pub stats: Stats, pub nodes: Vec<NodeInfo> }
 
 pub struct RpcContext {
     summary: Arc<Mutex<NetworkSummary>>,
@@ -60,263 +37,119 @@ pub struct RpcContext {
 }
 
 impl RpcContext {
-    pub fn new(
-        summary: Arc<Mutex<NetworkSummary>>,
-        nodes: Arc<Mutex<HashMap<SocketAddr, KnownNode>>>,
-    ) -> RpcContext {
-        RpcContext { summary, nodes }
+    pub fn new(s: Arc<Mutex<NetworkSummary>>, n: Arc<Mutex<HashMap<SocketAddr, KnownNode>>>) -> Self {
+        Self { summary: s, nodes: n }
     }
 }
 
-/// Estima el tip height usando el percentil 95 de alturas válidas
-fn estimate_tip_height(nodes: &HashMap<SocketAddr, KnownNode>) -> i32 {
-    let mut heights: Vec<i32> = nodes
-        .values()
-        .filter_map(|n| n.start_height)
-        .filter(|h| *h > MIN_MAINNET_HEIGHT)
-        .collect();
-    
-    if heights.is_empty() {
-        return MIN_MAINNET_HEIGHT;
-    }
-    
-    heights.sort();
-    let idx = ((heights.len() as f64) * 0.95) as usize;
-    heights.get(idx.min(heights.len() - 1)).copied().unwrap_or(MIN_MAINNET_HEIGHT)
+fn get_tip(nodes: &HashMap<SocketAddr, KnownNode>) -> i32 {
+    let mut h: Vec<_> = nodes.values().filter_map(|n| n.start_height).filter(|x| *x > MIN_HEIGHT).collect();
+    if h.is_empty() { return MIN_HEIGHT; }
+    h.sort();
+    h.get((h.len() as f64 * 0.95) as usize).copied().unwrap_or(MIN_HEIGHT)
 }
 
-/// Clasifica el tipo de cliente basado en user_agent
-fn classify_client(user_agent: &str) -> (String, bool) {
-    let ua_lower = user_agent.to_lowercase();
-    
-    // Detectar Flux (contiene "flux" en cualquier parte)
-    let is_flux = ua_lower.contains("flux");
-    
-    if is_flux {
-        return ("flux".to_string(), true);
+fn client_type(ua: &str) -> (String, bool) {
+    let lower = ua.to_lowercase();
+    if lower.contains("flux") { return ("flux".into(), true); }
+    if lower.contains("magicbean") {
+        if let Some(i) = lower.find("magicbean:") {
+            let ver = &lower[i+10..];
+            if let Some(d) = ver.find('.') {
+                if let Ok(maj) = ver[..d].parse::<u32>() { if maj >= 6 { return ("flux".into(), true); } }
+            }
+        }
+        return ("zcashd".into(), false);
     }
-    
-    // MagicBean 6.x también es Flux
-    if ua_lower.contains("magicbean:6.") {
-        return ("flux".to_string(), true);
-    }
-    
-    // Zcashd (MagicBean sin flux)
-    if ua_lower.contains("magicbean") {
-        return ("zcashd".to_string(), false);
-    }
-    
-    // Zebra
-    if ua_lower.contains("zebra") {
-        return ("zebra".to_string(), false);
-    }
-    
-    ("other".to_string(), false)
+    if lower.contains("zebra") { return ("zebra".into(), false); }
+    ("other".into(), false)
 }
 
-/// Determina si un nodo es relevante para Zcash mainnet
-fn is_relevant_zcash_node(
-    node: &KnownNode,
-    port: u16,
-    tip_height: i32,
-) -> bool {
-    // 1. Debe haber respondido VERSION (tener user_agent)
-    let user_agent = match &node.user_agent {
-        Some(ua) => ua.0.clone(),
-        None => return false,
-    };
-    
-    let ua_lower = user_agent.to_lowercase();
-    
-    // 2. User agent debe empezar con /MagicBean o /Zebra
-    let valid_client = ua_lower.starts_with("/magicbean") || ua_lower.starts_with("/zebra");
-    if !valid_client {
-        return false;
+fn is_good_node(n: &KnownNode, tip: i32) -> bool {
+    let ua = match &n.user_agent { Some(x) => x.0.to_lowercase(), None => return false };
+    if !ua.starts_with("/magicbean") && !ua.starts_with("/zebra") { return false; }
+    if ua.contains("flux") { return false; }
+    if ua.contains("magicbean") {
+        if let Some(i) = ua.find("magicbean:") {
+            let ver = &ua[i+10..];
+            if let Some(d) = ver.find('.') {
+                if let Ok(maj) = ver[..d].parse::<u32>() { if maj >= 6 { return false; } }
+            }
+        }
     }
-    
-    // 3. NO debe contener "flux"
-    if ua_lower.contains("flux") {
-        return false;
-    }
-    
-    // 4. MagicBean 6.x es Flux, excluir
-    if ua_lower.contains("magicbean:6.") {
-        return false;
-    }
-    
-    // 5. Altura debe estar dentro del rango permitido
-    let height = node.start_height.unwrap_or(0);
-    if height < MIN_MAINNET_HEIGHT {
-        return false;
-    }
-    
-    let height_diff = (height - tip_height).abs();
-    if height_diff > MAX_HEIGHT_DELTA {
-        return false;
-    }
-    
-    // 6. Puerto preferiblemente estándar (pero no excluyente)
-    // Los nodos en puertos estándar tienen prioridad pero no excluimos otros
-    
+    let h = n.start_height.unwrap_or(0);
+    if h < MIN_HEIGHT { return false; }
+    if !ua.contains("magicbean") && (h - tip).abs() > HEIGHT_TOLERANCE { return false; }
     true
 }
 
-pub async fn initialize_rpc_server(rpc_addr: SocketAddr, rpc_context: RpcContext) -> ServerHandle {
-    let cors = CorsLayer::new()
-        .allow_origin(Any)
-        .allow_methods(Any)
-        .allow_headers(Any);
-
-    let middleware = tower::ServiceBuilder::new().layer(cors);
-
-    let server = ServerBuilder::default()
-        .set_middleware(middleware)
-        .max_response_body_size(MAX_RESPONSE_SIZE)
-        .build(rpc_addr)
-        .await
-        .unwrap();
-    
-    let module = create_rpc_module(rpc_context);
-    debug!("Starting RPC server at {:?}", server.local_addr().unwrap());
-    server.start(module).unwrap()
+pub async fn initialize_rpc_server(addr: SocketAddr, ctx: RpcContext) -> ServerHandle {
+    let cors = CorsLayer::new().allow_origin(Any).allow_methods(Any).allow_headers(Any);
+    let mw = tower::ServiceBuilder::new().layer(cors);
+    let srv = ServerBuilder::default().set_middleware(mw).max_response_body_size(MAX_RESPONSE_SIZE).build(addr).await.unwrap();
+    let module = make_module(ctx);
+    debug!("rpc at {:?}", srv.local_addr().unwrap());
+    srv.start(module).unwrap()
 }
 
-fn create_rpc_module(rpc_context: RpcContext) -> RpcModule<RpcContext> {
-    let mut module = RpcModule::new(rpc_context);
+fn make_module(ctx: RpcContext) -> RpcModule<RpcContext> {
+    let mut m = RpcModule::new(ctx);
 
-    // Método original para compatibilidad
-    module.register_method("getmetrics", |_, ctx| {
-        Ok(ctx.summary.lock().clone())
-    }).unwrap();
+    m.register_method("getmetrics", |_, c| Ok(c.summary.lock().clone())).unwrap();
 
-    // Nuevo método con estadísticas filtradas
-    module.register_method("getstats", |_, ctx| {
-        let nodes = ctx.nodes.lock();
-        let summary = ctx.summary.lock();
-        let tip_height = estimate_tip_height(&nodes);
-        
-        let mut contacted = 0;
-        let mut relevant = 0;
-        let mut zcashd = 0;
-        let mut zebra = 0;
-        let mut flux = 0;
-        let mut other = 0;
-        
-        for (addr, node) in nodes.iter() {
-            // Solo contar nodos que respondieron VERSION
-            if node.user_agent.is_none() {
-                continue;
-            }
-            
+    m.register_method("getstats", |_, c| {
+        let nodes = c.nodes.lock();
+        let tip = get_tip(&nodes);
+        let mut contacted = 0; let mut relevant = 0;
+        let mut zd = 0; let mut zb = 0; let mut fx = 0; let mut ot = 0;
+
+        for (_, n) in nodes.iter() {
+            if n.user_agent.is_none() { continue; }
             contacted += 1;
-            
-            let ua = node.user_agent.as_ref().map(|v| v.0.clone()).unwrap_or_default();
-            let (client_type, is_flux) = classify_client(&ua);
-            
-            match client_type.as_str() {
-                "zcashd" => zcashd += 1,
-                "zebra" => zebra += 1,
-                "flux" => flux += 1,
-                _ => other += 1,
-            }
-            
-            if is_relevant_zcash_node(node, addr.port(), tip_height) {
-                relevant += 1;
-            }
+            let ua = n.user_agent.as_ref().map(|x| x.0.clone()).unwrap_or_default();
+            let (t, _) = client_type(&ua);
+            match t.as_str() { "zcashd" => zd += 1, "zebra" => zb += 1, "flux" => fx += 1, _ => ot += 1 }
+            if is_good_node(n, tip) { relevant += 1; }
         }
-        
-        Ok(NetworkStats {
-            num_known_nodes: nodes.len(),
-            num_contacted_nodes: contacted,
-            num_relevant_zcash_nodes: relevant,
-            num_zcashd_nodes: zcashd,
-            num_zebra_nodes: zebra,
-            num_flux_nodes: flux,
-            num_other_nodes: other,
-            tip_height_estimate: tip_height,
-            crawler_runtime_secs: summary.crawler_runtime.as_secs(),
-        })
+        Ok(Stats { num_known_nodes: nodes.len(), num_contacted_nodes: contacted, num_relevant_zcash_nodes: relevant,
+            num_zcashd_nodes: zd, num_zebra_nodes: zb, num_flux_nodes: fx, num_other_nodes: ot,
+            tip_height_estimate: tip, crawler_runtime_secs: c.summary.lock().crawler_runtime.as_secs() })
     }).unwrap();
 
-    // Método para obtener nodos con filtrado opcional
-    module.register_method("getnodes", |params, ctx| {
-        let include_flux: bool = params.parse().unwrap_or(false);
-        
-        let nodes = ctx.nodes.lock();
-        let tip_height = estimate_tip_height(&nodes);
-        
-        let mut result: Vec<NodeInfo> = Vec::new();
-        let mut stats = NetworkStats {
-            num_known_nodes: nodes.len(),
-            num_contacted_nodes: 0,
-            num_relevant_zcash_nodes: 0,
-            num_zcashd_nodes: 0,
-            num_zebra_nodes: 0,
-            num_flux_nodes: 0,
-            num_other_nodes: 0,
-            tip_height_estimate: tip_height,
-            crawler_runtime_secs: 0,
-        };
-        
-        for (addr, node) in nodes.iter() {
-            // Solo nodos que respondieron VERSION
-            if node.user_agent.is_none() {
-                continue;
-            }
-            
+    m.register_method("getnodes", |p, c| {
+        let show_flux: bool = p.parse().unwrap_or(false);
+        let rt = c.summary.lock().crawler_runtime.as_secs();
+        let nodes = c.nodes.lock();
+        let tip = get_tip(&nodes);
+
+        let mut stats = Stats { num_known_nodes: nodes.len(), num_contacted_nodes: 0, num_relevant_zcash_nodes: 0,
+            num_zcashd_nodes: 0, num_zebra_nodes: 0, num_flux_nodes: 0, num_other_nodes: 0, tip_height_estimate: tip, crawler_runtime_secs: rt };
+        let mut out = Vec::new();
+
+        for (addr, n) in nodes.iter() {
+            if n.user_agent.is_none() { continue; }
             stats.num_contacted_nodes += 1;
-            
-            let ua = node.user_agent.as_ref().map(|v| v.0.clone()).unwrap_or_default();
-            let (client_type, is_flux) = classify_client(&ua);
-            let is_relevant = is_relevant_zcash_node(node, addr.port(), tip_height);
-            
-            match client_type.as_str() {
-                "zcashd" => stats.num_zcashd_nodes += 1,
-                "zebra" => stats.num_zebra_nodes += 1,
-                "flux" => stats.num_flux_nodes += 1,
-                _ => stats.num_other_nodes += 1,
-            }
-            
-            if is_relevant {
-                stats.num_relevant_zcash_nodes += 1;
-            }
-            
-            // Filtrar según parámetro
-            if !include_flux && is_flux {
-                continue;
-            }
-            
-            // Por defecto solo mostrar nodos relevantes
-            if !include_flux && !is_relevant {
-                continue;
-            }
-            
-            let last_seen_secs = node.last_connected
-                .map(|t| t.elapsed().as_secs())
-                .unwrap_or(u64::MAX);
-            
-            result.push(NodeInfo {
-                ip: addr.ip().to_string(),
-                port: addr.port(),
-                protocol_version: node.protocol_version.map(|v| v.0),
-                user_agent: Some(ua),
-                height: node.start_height,
-                services: node.services,
-                last_seen_secs,
-                is_relevant,
-                is_flux,
-                client_type,
+            let ua = n.user_agent.as_ref().map(|x| x.0.clone()).unwrap_or_default();
+            let (t, flux) = client_type(&ua);
+            let good = is_good_node(n, tip);
+
+            match t.as_str() { "zcashd" => stats.num_zcashd_nodes += 1, "zebra" => stats.num_zebra_nodes += 1, "flux" => stats.num_flux_nodes += 1, _ => stats.num_other_nodes += 1 }
+            if good { stats.num_relevant_zcash_nodes += 1; }
+
+            if !show_flux && flux { continue; }
+            if !show_flux && t != "zcashd" && t != "zebra" { continue; }
+
+            out.push(NodeInfo {
+                ip: addr.ip().to_string(), port: addr.port(),
+                protocol_version: n.protocol_version.map(|v| v.0), user_agent: Some(ua),
+                height: n.start_height, services: n.services,
+                last_seen_secs: n.last_connected.map(|t| t.elapsed().as_secs()).unwrap_or(u64::MAX),
+                is_relevant: good, is_flux: flux, client_type: t,
             });
         }
-        
-        // Ordenar: relevantes primero, luego por última conexión
-        result.sort_by(|a, b| {
-            b.is_relevant.cmp(&a.is_relevant)
-                .then(a.last_seen_secs.cmp(&b.last_seen_secs))
-        });
-        
-        Ok(NodesResponse { stats, nodes: result })
+        out.sort_by(|a, b| b.is_relevant.cmp(&a.is_relevant).then(a.last_seen_secs.cmp(&b.last_seen_secs)));
+        Ok(NodesResponse { stats, nodes: out })
     }).unwrap();
 
-    module
+    m
 }

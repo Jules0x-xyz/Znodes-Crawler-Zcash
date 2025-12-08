@@ -2,8 +2,8 @@
 name = "znodes"
 version = "0.1.0"
 edition = "2021"
-description = "Zcash network crawler and monitor"
-repository = "https://github.com/Social-Mask-Labs/znodes"
+description = "zcash network crawler"
+repository = "https://github.com/Jules0x-xyz/Znodes-Crawler-Zcash"
 license = "MIT"
 
 [[bin]]
