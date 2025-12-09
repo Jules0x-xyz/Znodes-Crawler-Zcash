@@ -49,5 +49,3 @@ curl -X POST http://localhost:54321 \
 
 Thankiu for reading! If you have questions, let me know.
 
----
-This was created with artificial intelligence and a representative of our team in order to better understand the idea and the form of development and be able to reflect it in English.
