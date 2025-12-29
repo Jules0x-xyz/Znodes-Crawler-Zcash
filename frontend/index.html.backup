@@ -329,42 +329,6 @@
             color: var(--text-muted);
         }
         
-        .filter-group {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-        }
-        
-        .filter-btn {
-            background: var(--bg-primary);
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            padding: 8px 14px;
-            color: var(--text-secondary);
-            font-size: 12px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        
-        .filter-btn:hover {
-            border-color: var(--accent);
-            color: var(--text-primary);
-        }
-        
-        .filter-btn.active {
-            background: var(--accent);
-            border-color: var(--accent);
-            color: #000;
-            font-weight: 600;
-        }
-        
-        .filter-btn.active.zebra {
-            background: var(--blue);
-            border-color: var(--blue);
-            color: #fff;
-        }
-        
         /* Table */
         table { 
             width: 100%; 
@@ -578,12 +542,7 @@
             <div class="nodes-section">
                 <div class="nodes-header">
                     <span class="nodes-title">Network Nodes <span class="nodes-count">(<span id="nodeCount">0</span>)</span></span>
-                    <div class="filter-group">
-                        <button class="filter-btn active" onclick="setFilter('all')">All</button>
-                        <button class="filter-btn" onclick="setFilter('zcashd')">Zcashd</button>
-                        <button class="filter-btn zebra" onclick="setFilter('zebra')">Zebra</button>
-                    </div>
-                    <input type="text" class="search" id="search" placeholder="Search IP, location..." oninput="renderNodes()">
+                    <input type="text" class="search" id="search" placeholder="Search IP or user agent..." oninput="renderNodes()">
                 </div>
                 <table>
                     <thead>
@@ -593,8 +552,6 @@
                             <th>Client</th>
                             <th>Version</th>
                             <th>Height</th>
-                            <th>City</th>
-                            <th>Country</th>
                             <th>Last Seen</th>
                         </tr>
                     </thead>
@@ -625,7 +582,6 @@
         let stats = {};
         let map = null;
         let markers = [];
-        let currentFilter = 'all';
         
         // Load IP cache from localStorage
         const ipCache = new Map(JSON.parse(localStorage.getItem('ipGeoCache') || '[]'));
@@ -634,42 +590,6 @@
         setInterval(() => {
             localStorage.setItem('ipGeoCache', JSON.stringify([...ipCache]));
         }, 30000);
-        
-        // Backup APIs in case one fails
-        const geoAPIs = [
-            {
-                name: 'ipapi.co',
-                url: (ip) => `https://ipapi.co/${ip}/json/`,
-                parse: (data) => data.latitude && data.longitude ? {
-                    lat: data.latitude,
-                    lon: data.longitude,
-                    city: data.city || 'Unknown',
-                    country: data.country_name || 'Unknown'
-                } : null
-            },
-            {
-                name: 'ip-api.com',
-                url: (ip) => `http://ip-api.com/json/${ip}?fields=status,country,city,lat,lon`,
-                parse: (data) => data.status === 'success' ? {
-                    lat: data.lat,
-                    lon: data.lon,
-                    city: data.city || 'Unknown',
-                    country: data.country || 'Unknown'
-                } : null
-            },
-            {
-                name: 'ipwhois.app',
-                url: (ip) => `https://ipwhois.app/json/${ip}`,
-                parse: (data) => data.latitude && data.longitude ? {
-                    lat: data.latitude,
-                    lon: data.longitude,
-                    city: data.city || 'Unknown',
-                    country: data.country || 'Unknown'
-                } : null
-            }
-        ];
-        
-        let currentAPIIndex = 0;
 
         // Initialize map
         function initMap() {
@@ -686,56 +606,25 @@
                 return ipCache.get(ip);
             }
             
-            // Try multiple APIs with fallback
-            for (let attempt = 0; attempt < geoAPIs.length; attempt++) {
-                const api = geoAPIs[(currentAPIIndex + attempt) % geoAPIs.length];
+            try {
+                // Using ip-api.com - free, 45 req/min, no key needed
+                const res = await fetch(`http://ip-api.com/json/${ip}?fields=status,message,country,city,lat,lon`);
+                const data = await res.json();
                 
-                try {
-                    console.log(`[Geo] Trying ${api.name} for ${ip}...`);
-                    const res = await fetch(api.url(ip));
-                    
-                    if (!res.ok) {
-                        console.warn(`[Geo] ${api.name} returned ${res.status}`);
-                        continue;
-                    }
-                    
-                    const data = await res.json();
-                    const geo = api.parse(data);
-                    
-                    if (geo) {
-                        console.log(`[Geo] ✓ ${ip} → ${geo.city}, ${geo.country}`);
-                        ipCache.set(ip, geo);
-                        return geo;
-                    }
-                } catch (e) {
-                    console.warn(`[Geo] ${api.name} error:`, e.message);
-                    // Try next API
-                    continue;
+                if (data.status === 'success' && data.lat && data.lon) {
+                    const geo = {
+                        lat: data.lat,
+                        lon: data.lon,
+                        city: data.city || 'Unknown',
+                        country: data.country || 'Unknown'
+                    };
+                    ipCache.set(ip, geo);
+                    return geo;
                 }
+            } catch (e) {
+                console.error('Geo error for', ip, e);
             }
-            
-            console.error(`[Geo] ✗ All APIs failed for ${ip}`);
             return null;
-        }
-
-        function setFilter(filter) {
-            currentFilter = filter;
-            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
-            event.target.classList.add('active');
-            renderNodes();
-            updateMapFilter();
-        }
-        
-        function updateMapFilter() {
-            if (!map) return;
-            markers.forEach(marker => {
-                const nodeData = marker.options.nodeData;
-                if (currentFilter === 'all' || nodeData.client_type === currentFilter) {
-                    marker.setStyle({ fillOpacity: 0.8, opacity: 1 });
-                } else {
-                    marker.setStyle({ fillOpacity: 0.1, opacity: 0.2 });
-                }
-            });
         }
 
         async function updateMap() {
@@ -752,26 +641,22 @@
                 const data = await res.json();
                 
                 if (data.result && Array.isArray(data.result)) {
+                    // Don't clear old markers, just update
                     const existingIps = new Set(markers.map(m => m.options.nodeIp));
-                    const newNodes = data.result.filter(node => !existingIps.has(node.ip));
-                    
-                    console.log(`[Map] Total nodes: ${data.result.length}, New: ${newNodes.length}, Cached: ${existingIps.size}`);
                     
                     document.getElementById('mapNodeCount').textContent = data.result.length;
                     
+                    // Only process new nodes to avoid hitting rate limits
+                    const newNodes = data.result.filter(node => !existingIps.has(node.ip));
+                    
                     if (newNodes.length > 0) {
-                        if (loadingEl) {
-                            loadingEl.innerHTML = `<div style="color:var(--text-secondary);">Loading ${newNodes.length} nodes... (${markers.length}/${data.result.length})</div>`;
-                            loadingEl.classList.add('active');
-                        }
+                        console.log(`Adding ${newNodes.length} new nodes to map...`);
+                        if (loadingEl) loadingEl.classList.add('active');
                         
-                        let loaded = 0;
-                        
-                        // Process all nodes in parallel batches for speed
-                        const batchSize = 10; // Increased from 3
+                        // Batch process with slower rate
+                        const batchSize = 3;
                         for (let i = 0; i < newNodes.length; i += batchSize) {
                             const batch = newNodes.slice(i, i + batchSize);
-                            
                             await Promise.all(batch.map(async node => {
                                 const geo = await getGeoLocation(node.ip);
                                 if (geo) {
@@ -783,13 +668,12 @@
                                         weight: 1,
                                         opacity: 1,
                                         fillOpacity: 0.8,
-                                        nodeIp: node.ip,
-                                        nodeData: { ...node, city: geo.city, country: geo.country }
+                                        nodeIp: node.ip
                                     }).addTo(map);
                                     
                                     marker.bindPopup(`
                                         <div style="color:#000;font-size:12px;">
-                                            <strong>${node.client_type.toUpperCase()}</strong><br>
+                                            <strong>${node.client_type}</strong><br>
                                             IP: ${node.ip}<br>
                                             Height: ${(node.height || 0).toLocaleString()}<br>
                                             Location: ${geo.city}, ${geo.country}
@@ -797,66 +681,54 @@
                                     `);
                                     
                                     markers.push(marker);
-                                    loaded++;
-                                    
-                                    // Update progress
-                                    if (loadingEl) {
-                                        loadingEl.innerHTML = `<div style="color:var(--text-secondary);">Loading... ${loaded}/${newNodes.length} (${Math.round(loaded/newNodes.length*100)}%)</div>`;
-                                    }
                                 }
                             }));
                             
-                            // Small delay between batches to avoid overwhelming APIs
+                            // Wait between batches - slower to respect rate limits
                             if (i + batchSize < newNodes.length) {
-                                await new Promise(resolve => setTimeout(resolve, 500));
+                                await new Promise(resolve => setTimeout(resolve, 2000));
                             }
                         }
                         
-                        console.log(`[Map] ✓ Added ${loaded} markers, total: ${markers.length}`);
                         if (loadingEl) loadingEl.classList.remove('active');
-                        
                     } else if (markers.length === 0 && data.result.length > 0) {
-                        // First load but cache is empty - shouldn't happen but handle it
-                        console.log('[Map] First load, processing all nodes...');
+                        // First load - need to load all nodes
                         if (loadingEl) loadingEl.classList.add('active');
-                        await updateMap(); // Recursive call
+                        await updateMap(); // Recursive call will process them
                     } else {
-                        // All nodes already on map
-                        console.log(`[Map] ✓ All ${markers.length} nodes already displayed`);
-                        if (loadingEl) loadingEl.classList.remove('active');
+                        // Hide loading if we have markers
+                        if (loadingEl && markers.length > 0) loadingEl.classList.remove('active');
                     }
                 }
             } catch (e) {
-                console.error('[Map] Error:', e);
-                if (loadingEl) {
-                    loadingEl.innerHTML = `<div style="color:#f00;">Map error. Check console (F12)</div>`;
+                console.error('Map update error:', e);
+                if (loadingEl) loadingEl.classList.remove('active');
+            }
+        }
+                    }
                 }
+            } catch (e) {
+                console.error('Map update error:', e);
             }
         }
 
         async function fetchData() {
-            console.log('[fetchData] Starting...');
             try {
                 const res = await fetch('/rpc', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({jsonrpc: '2.0', id: 0, method: 'getnodes', params: [false]})
                 });
-                console.log('[fetchData] Response status:', res.status);
                 const data = await res.json();
-                console.log('[fetchData] Data received:', data.result ? 'OK' : 'ERROR');
                 
                 if (data.result) {
                     nodes = data.result.nodes || [];
                     stats = data.result.stats || {};
-                    console.log('[fetchData] Nodes:', nodes.length, 'Stats:', stats);
                     updateUI();
                     document.getElementById('error').style.display = 'none';
-                } else {
-                    console.error('[fetchData] No result in response:', data);
                 }
             } catch (e) {
-                console.error('[fetchData] Error:', e);
+                console.error(e);
                 document.getElementById('error').style.display = 'block';
             }
         }
@@ -881,7 +753,6 @@
         }
 
         function updateUI() {
-            console.log('[updateUI] Updating with nodes:', nodes.length);
             const zcashdNodes = nodes.filter(n => n.client_type === 'zcashd');
             const zebraNodes = nodes.filter(n => n.client_type === 'zebra');
             
@@ -894,8 +765,6 @@
             if (uptimeEl) {
                 uptimeEl.textContent = formatRuntime(stats.crawler_runtime_secs || 0);
             }
-            
-            console.log('[updateUI] Stats updated - Total:', nodes.length, 'zcashd:', zcashdNodes.length, 'zebra:', zebraNodes.length);
             
             
             // Distribution
@@ -914,20 +783,10 @@
             renderNodes();
         }
 
-        async function renderNodes() {
+        function renderNodes() {
             const search = document.getElementById('search').value.toLowerCase();
             const filtered = nodes.filter(n => {
-                // Filter by client type
-                if (currentFilter !== 'all' && n.client_type !== currentFilter) {
-                    return false;
-                }
-                
-                // Get cached geo data
-                const geo = ipCache.get(n.ip);
-                const location = geo ? `${geo.city} ${geo.country}` : '';
-                
-                // Search filter
-                const str = (n.ip + ' ' + (n.user_agent || '') + ' ' + location).toLowerCase();
+                const str = (n.ip + ' ' + (n.user_agent || '')).toLowerCase();
                 return str.includes(search);
             });
             
@@ -940,25 +799,17 @@
                                 n.last_seen_secs < 3600 ? Math.floor(n.last_seen_secs/60) + 'm ago' :
                                 n.last_seen_secs < 86400 ? Math.floor(n.last_seen_secs/3600) + 'h ago' :
                                 Math.floor(n.last_seen_secs/86400) + 'd ago';
-                
-                // Get location from cache
-                const geo = ipCache.get(n.ip);
-                const city = geo ? geo.city : '<span style="color:var(--text-muted)">Loading...</span>';
-                const country = geo ? geo.country : '<span style="color:var(--text-muted)">--</span>';
-                
                 return `<tr>
                     <td class="ip-cell">${n.ip}</td>
                     <td>${n.port}</td>
                     <td><span class="client-badge ${badge}">${n.client_type}</span></td>
                     <td class="version-cell">${version}</td>
                     <td class="height-cell">${(n.height || 0).toLocaleString()}</td>
-                    <td>${city}</td>
-                    <td>${country}</td>
                     <td class="time-cell">${lastSeen}</td>
                 </tr>`;
             }).join('');
             
-            document.getElementById('tbody').innerHTML = html || '<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:40px">No nodes found</td></tr>';
+            document.getElementById('tbody').innerHTML = html || '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:40px">No nodes found</td></tr>';
         }
 
         // Initial load and refresh every 10 seconds
@@ -966,24 +817,9 @@
         fetchData();
         setInterval(fetchData, 10000);
         
-        // Update map immediately and more frequently at start
-        console.log('[Init] Starting map update...');
+        // Update map every 5 minutes (less frequent due to rate limits)
         updateMap();
-        
-        // Check every 30 seconds for first 5 minutes to catch all nodes
-        let mapUpdateCount = 0;
-        const mapInterval = setInterval(() => {
-            mapUpdateCount++;
-            console.log(`[Init] Map update #${mapUpdateCount}`);
-            updateMap();
-            
-            // After 10 updates (5 min), slow down to every 5 minutes
-            if (mapUpdateCount >= 10) {
-                clearInterval(mapInterval);
-                setInterval(updateMap, 300000); // 5 min
-                console.log('[Init] Switched to 5-minute map updates');
-            }
-        }, 30000); // 30 seconds
+        setInterval(updateMap, 300000);
     </script>
 </body>
 </html>

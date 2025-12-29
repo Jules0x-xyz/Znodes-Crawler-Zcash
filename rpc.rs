@@ -9,7 +9,7 @@ use tracing::debug;
 use ziggurat_core_crawler::summary::NetworkSummary;
 use crate::network::KnownNode;
 
-const HEIGHT_TOLERANCE: i32 = 10000;
+const HEIGHT_TOLERANCE: i32 = 20000;
 const MIN_HEIGHT: i32 = 2_500_000;
 pub const MAX_RESPONSE_SIZE: u32 = 200_000_000;
 
@@ -19,6 +19,26 @@ pub struct NodeInfo {
     pub protocol_version: Option<u32>, pub user_agent: Option<String>,
     pub height: Option<i32>, pub services: Option<u64>,
     pub last_seen_secs: u64, pub is_relevant: bool, pub is_flux: bool, pub client_type: String,
+}
+
+#[derive(Clone, Serialize)]
+pub struct NodeGeo {
+    pub ip: String,
+    pub client_type: String,
+    pub height: Option<i32>,
+}
+
+#[derive(Clone, Serialize)]
+pub struct DiagnosticInfo {
+    pub total_known: usize,
+    pub total_contacted: usize,
+    pub filtered_by_no_ua: usize,
+    pub filtered_by_flux: usize,
+    pub filtered_by_height: usize,
+    pub filtered_by_zebra_sync: usize,
+    pub passed_filters: usize,
+    pub zcashd_nodes: usize,
+    pub zebra_nodes: usize,
 }
 
 #[derive(Clone, Serialize)]
@@ -149,6 +169,104 @@ fn make_module(ctx: RpcContext) -> RpcModule<RpcContext> {
         }
         out.sort_by(|a, b| b.is_relevant.cmp(&a.is_relevant).then(a.last_seen_secs.cmp(&b.last_seen_secs)));
         Ok(NodesResponse { stats, nodes: out })
+    }).unwrap();
+
+    m.register_method("getgeonodes", |_, c| {
+        let nodes = c.nodes.lock();
+        let tip = get_tip(&nodes);
+        let mut out = Vec::new();
+
+        for (addr, n) in nodes.iter() {
+            if n.user_agent.is_none() { continue; }
+            let ua = n.user_agent.as_ref().map(|x| x.0.clone()).unwrap_or_default();
+            let (t, flux) = client_type(&ua);
+            let good = is_good_node(n, tip);
+
+            if flux { continue; }
+            if t != "zcashd" && t != "zebra" { continue; }
+            if !good { continue; }
+
+            out.push(NodeGeo {
+                ip: addr.ip().to_string(),
+                client_type: t,
+                height: n.start_height,
+            });
+        }
+        Ok(out)
+    }).unwrap();
+
+    m.register_method("getdiagnostics", |_, c| {
+        let nodes = c.nodes.lock();
+        let tip = get_tip(&nodes);
+        
+        let mut no_ua = 0;
+        let mut flux_count = 0;
+        let mut height_filtered = 0;
+        let mut zebra_sync_filtered = 0;
+        let mut passed = 0;
+        let mut zcashd = 0;
+        let mut zebra = 0;
+        
+        for n in nodes.values() {
+            if n.user_agent.is_none() {
+                no_ua += 1;
+                continue;
+            }
+            
+            let ua = n.user_agent.as_ref().map(|x| x.0.to_lowercase()).unwrap_or_default();
+            
+            // Check flux
+            if ua.contains("flux") {
+                flux_count += 1;
+                continue;
+            }
+            
+            if ua.contains("magicbean") {
+                if let Some(i) = ua.find("magicbean:") {
+                    let ver = &ua[i+10..];
+                    if let Some(d) = ver.find('.') {
+                        if let Ok(maj) = ver[..d].parse::<u32>() {
+                            if maj >= 6 {
+                                flux_count += 1;
+                                continue;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Check height
+            let h = n.start_height.unwrap_or(0);
+            if h < MIN_HEIGHT {
+                height_filtered += 1;
+                continue;
+            }
+            
+            // Check zebra sync tolerance
+            if ua.contains("zebra") {
+                if (h - tip).abs() > HEIGHT_TOLERANCE {
+                    zebra_sync_filtered += 1;
+                    continue;
+                }
+                zebra += 1;
+            } else if ua.contains("magicbean") {
+                zcashd += 1;
+            }
+            
+            passed += 1;
+        }
+        
+        Ok(DiagnosticInfo {
+            total_known: nodes.len(),
+            total_contacted: nodes.values().filter(|n| n.user_agent.is_some()).count(),
+            filtered_by_no_ua: no_ua,
+            filtered_by_flux: flux_count,
+            filtered_by_height: height_filtered,
+            filtered_by_zebra_sync: zebra_sync_filtered,
+            passed_filters: passed,
+            zcashd_nodes: zcashd,
+            zebra_nodes: zebra,
+        })
     }).unwrap();
 
     m

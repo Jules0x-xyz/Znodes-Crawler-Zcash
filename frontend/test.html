@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test API</title>
+</head>
+<body>
+    <h1>Testing RPC Connection</h1>
+    <div id="result"></div>
+    
+    <script>
+        async function test() {
+            const result = document.getElementById('result');
+            result.innerHTML = 'Testing...';
+            
+            try {
+                const res = await fetch('/rpc', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({jsonrpc: '2.0', id: 0, method: 'getnodes', params: [false]})
+                });
+                
+                const data = await res.json();
+                
+                if (data.result) {
+                    result.innerHTML = `
+                        <h2>SUCCESS!</h2>
+                        <p>Total nodes: ${data.result.nodes.length}</p>
+                        <p>zcashd: ${data.result.stats.num_zcashd_nodes}</p>
+                        <p>Zebra: ${data.result.stats.num_zebra_nodes}</p>
+                        <pre>${JSON.stringify(data.result.stats, null, 2)}</pre>
+                    `;
+                } else {
+                    result.innerHTML = `<p>Error: No result</p><pre>${JSON.stringify(data, null, 2)}</pre>`;
+                }
+            } catch (e) {
+                result.innerHTML = `<p>ERROR: ${e.message}</p>`;
+            }
+        }
+        
+        test();
+    </script>
+</body>
+</html>

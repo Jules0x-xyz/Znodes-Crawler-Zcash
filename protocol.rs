@@ -9,10 +9,10 @@ use ziggurat_zcash::{protocol::{message::Message, payload::{block::Headers, Addr
 use super::network::KnownNetwork;
 use crate::network::ConnectionState;
 
-pub const NUM_CONN_ATTEMPTS_PERIODIC: usize = 1000;
-pub const MAX_CONCURRENT_CONNECTIONS: u16 = 2500;
-pub const RECONNECT_INTERVAL_SECS: u64 = 60;
-pub const MAX_WAIT_FOR_ADDR_SECS: u64 = 120;
+pub const NUM_CONN_ATTEMPTS_PERIODIC: usize = 2000;
+pub const MAX_CONCURRENT_CONNECTIONS: u16 = 3500;
+pub const RECONNECT_INTERVAL_SECS: u64 = 45;
+pub const MAX_WAIT_FOR_ADDR_SECS: u64 = 90;
 
 #[derive(Clone)]
 pub struct Crawler {
