@@ -1,0 +1,7 @@
+
+# Stable configurations
+edition = "2018"
+
+# Nightly configurations
+imports_granularity = "Crate"
+group_imports = "StdExternalCrate"

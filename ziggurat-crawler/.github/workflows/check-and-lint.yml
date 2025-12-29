@@ -1,0 +1,32 @@
+name: basics
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  core:
+    uses: runziggurat/ziggurat-core/.github/workflows/check-and-lint.yml@main
+
+  extra:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        steps:
+          - name: test-ignored
+            run: ci-test-ignored
+          - name: check-crawler
+            run: ci-check-crawler
+    steps:
+      - uses: actions/checkout@v3
+      - uses: Swatinem/rust-cache@v2
+      - uses: cachix/install-nix-action@v19
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+      - name: ${{ matrix.steps.name }}
+        run: |
+          nix develop --command \
+          ${{ matrix.steps.run }}

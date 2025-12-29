@@ -1,6 +1,65 @@
-# ZNodes
+# ZNodes - Zcash Network Crawler
 
 Crawler P2P para la red Zcash mainnet. Monitoreo en tiempo real con filtrado de red Flux y API JSON-RPC.
+
+![Zcash Logo](zcash-logo.png)
+
+## Estructura del Proyecto
+
+```
+znodes/
+├── src/                      # Código fuente del crawler
+│   ├── main.rs              # Entry point, loops principales
+│   ├── protocol.rs          # Protocolo P2P Zcash (handshake, mensajes)
+│   ├── network.rs           # Estado de red y conexiones
+│   ├── metrics.rs           # Métricas y clasificación de nodos
+│   └── rpc.rs               # API JSON-RPC 2.0
+├── frontend/                 # Dashboard web
+│   ├── index.html           # Interfaz principal (mapa + estadísticas)
+│   ├── robots.txt
+│   └── sitemap.xml
+├── ziggurat-crawler/         # Fork de Ziggurat optimizado
+│   ├── src/                 # Código fuente de Ziggurat
+│   └── ...
+├── docs/                     # Documentación adicional
+│   ├── CAMBIOS_ZNODES.md
+│   ├── MAPA_ARREGLADO.md
+│   ├── MAPA_NITRO.md
+│   └── SOLUCION_FRONTEND.md
+├── Cargo.toml               # Configuración de Rust
+├── Cargo.lock               # Dependencias bloqueadas
+├── znodes-diag.sh           # Script de diagnóstico
+└── README.md                # Este archivo
+```
+
+## Requisitos
+
+- **Rust** 1.70+ (rustup recomendado)
+- **Linux/macOS** (probado en Ubuntu 22.04)
+- Puerto abierto para RPC (default: 54321)
+- Puerto abierto para frontend (default: 80/443)
+
+## Instalacion Rapida
+
+```bash
+# Clonar repositorio
+git clone https://github.com/Jules0x-xyz/Znodes-Crawler-Zcash.git
+cd Znodes-Crawler-Zcash
+
+# Compilar
+cargo build --release
+
+# Ejecutar crawler
+./target/release/znodes \
+    --seed-addrs dnsseed.z.cash dnsseed.str4d.xyz \
+    --rpc-addr 0.0.0.0:54321 \
+    --crawl-interval 10
+
+# Servir frontend (en otra terminal)
+cd frontend
+python3 -m http.server 80
+# O usar nginx/caddy para produccion
+```
 
 ## Resumen Ejecutivo
 

@@ -1,0 +1,48 @@
+name: crawler
+
+on:
+  workflow_dispatch:
+  # schedule:
+  #  - cron: '0 6 * * *' # Every day at 6:00 AM UTC.
+
+jobs:
+  crawl-network:
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v3
+      - name: Begin crawling
+        run: |
+          nix develop --command \
+          cargo run --release --features crawler --bin crawler -- --seed-addrs "dnsseed.z.cash" "dnsseed.str4d.xyz" "mainnet.seeder.zfnd.org" "mainnet.is.yolo.money" --rpc-addr 127.0.0.1:54321 &
+          # After 30 min, query rpc and send SIGINT.
+          sleep 30m
+          curl --data-binary '{"jsonrpc": "2.0", "id":0, "method": "getmetrics", "params": [] }' -H 'content-type: application/json' http://127.0.0.1:54321/ > latest.json
+          kill -2 $(pidof crawler)
+      - name: Check for error
+        run: |
+          # If the result contains any error, fail workflow
+          if grep "error" latest.json; then
+            echo "Aborting. Crawler results contained an error"
+            exit 1
+          fi
+          cat latest.json
+      - uses: actions/upload-artifact@v3
+        with:
+          name: latest-result
+          path: latest.json
+          
+  call-build-viz-state-workflow:
+    needs: [ crawl-network ]
+    uses: runziggurat/ziggurat-core/.github/workflows/build-viz-state.yml@main
+    with: 
+      filter: Zcash
+
+  call-process-results-workflow:
+    needs: [ call-build-viz-state-workflow ]
+    uses: runziggurat/ziggurat-core/.github/workflows/process-results.yml@main
+    with:
+      name: crawler
+      extension: json
+      repository: zcash
+    secrets:
+      gcp_credentials: ${{ secrets.GCP_CREDENTIALS }}

@@ -1,25 +1,38 @@
 # Build artifacts
 /target/
+**/target/
 debug/
 release/
 
-# Cargo lock (optional, but often included for binaries)
-# Cargo.lock
+# Cargo
+# Cargo.lock  # Included for reproducible builds
 
 # IDE
 .idea/
 .vscode/
 *.swp
 *.swo
-
-# OS
 .DS_Store
 Thumbs.db
 
 # Logs
 *.log
+crawler.log
 crawler-log.txt
 
 # Environment
 .env
 .env.local
+.env.*.local
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.bak
+*.backup
+
+# Node modules (if any)
+node_modules/

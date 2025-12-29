@@ -8,7 +8,7 @@ license = "MIT"
 
 [[bin]]
 name = "znodes"
-path = "main.rs"
+path = "src/main.rs"
 
 [dependencies]
 async-trait = "0.1"

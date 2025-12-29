@@ -1,0 +1,85 @@
+[package]
+name = "ziggurat-zcash"
+version = "0.1.0"
+authors = ["Niklas Long <niklas@equilibrium.co>, Mirko von Leipzig <mirko@equilibrium.co>", "Ziggurat contributors"]
+edition = "2021"
+
+[dependencies]
+assert_matches = "1.5"
+async-trait = "0.1"
+bytes = "1"
+chrono = "0.4"
+dns-lookup = "2.0"
+hex = "0.4"
+home = "0.5"
+lazy_static = "1.4"
+metrics = "0.21"
+metrics-util = "0.15"
+parking_lot = "0.12"
+pea2pea = "0.46"
+rand = "0.8"
+rand_chacha = "0.3"
+regex = "1"
+sha2 = "0.10"
+spectre = { git = "https://github.com/niklaslong/spectre", rev = "9a0664f" }
+tabled = "0.10"
+time = "0.3"
+toml = "0.7"
+ziggurat-core-crawler = { git = "https://github.com/runziggurat/ziggurat-core", rev = "33ef131" }
+ziggurat-core-metrics = { git = "https://github.com/runziggurat/ziggurat-core", rev = "33ef131" }
+ziggurat-core-utils = { git = "https://github.com/runziggurat/ziggurat-core", rev = "33ef131" }
+
+[dependencies.clap]
+version = "4.2"
+features = ["derive"]
+optional = true
+
+[dependencies.futures-util]
+version = "0.3"
+features = ["sink"]
+
+[dependencies.jsonrpsee]
+version = "0.16"
+features = ["server"]
+optional = true
+
+[dependencies.serde]
+version = "1"
+features = ["derive"]
+
+[dependencies.tokio]
+version = "1"
+features = ["full"]
+
+[dependencies.tokio-util]
+version = "0.7"
+features = ["codec"]
+
+[dependencies.tracing]
+version = "0.1"
+default-features = false
+
+[dependencies.tracing-subscriber]
+version = "0.3"
+features = ["env-filter", "fmt"]
+
+[dependencies.tower]
+version = "0.4"
+optional = true
+
+[dependencies.tower-http]
+version = "0.4"
+features = ["cors"]
+optional = true
+
+[features]
+crawler = ["clap", "jsonrpsee", "tower", "tower-http"]
+
+[[bin]]
+name = "crawler"
+path = "src/tools/crawler/main.rs"
+required-features = ["crawler"]
+
+[dependencies.reqwest]
+version = "0.11"
+features = ["json"]
